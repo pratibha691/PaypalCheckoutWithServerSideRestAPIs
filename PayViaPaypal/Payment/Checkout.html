@@ -1,0 +1,178 @@
+<html>
+    <head>
+        
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.js"></script>
+        <script src="https://www.paypalobjects.com/api/checkout.js"></script>
+        <script  type="text/javscript">
+        var productId = "";
+        var userToken = "";
+        var amount = "";
+        
+        </script>
+        <style type="text/css">
+            .centerAl {
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                width:80%;
+                -webkit-transform: translate(-50%, -50%);
+                transform: translate(-50%, -50%);
+            }
+        </style>
+        
+    </head>
+    
+    <body>
+        
+        <div class="earning-tbl payment-card-sec hide">
+            
+            <div class="page-subtitle bdr-btm">
+                <div class="flex-align-ctr">
+                    <h4 class="flex1", id='amount'>
+                    </h4>
+                </div>
+                <div class="flex-align-ctr">
+                    <p class="flex1">Note: Amount will be released to Influencer's account when you will mark it complete or it will exceed the waiting time.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div id="paypal-button-container"></div>
+        
+        <script>
+            
+            
+
+            paypal.Button.render({
+                                 
+                                 style: {
+                                 layout: 'vertical',  // horizontal | vertical
+                                 size:   'responsive',    // medium | large | responsive
+                                 shape:  'rect',      // pill | rect
+                                 color:  'blue',      // gold | blue | silver | black
+                                 //label: 'checkout'  // checkout | credit | pay | buynow | generic
+                                 },
+                                 
+                                 // Specify allowed and disallowed funding sources
+                                 //
+                                 // Options:
+                                 // - paypal.FUNDING.CARD
+                                 // - paypal.FUNDING.CREDIT
+                                 // - paypal.FUNDING.ELV
+                                 
+                                 funding: {
+                                 allowed: [],
+                                 disallowed: [paypal.FUNDING.CREDIT,paypal.FUNDING.CARD  ]
+                                 },
+                                 
+                                 
+                                 env: 'sandbox', // sandbox | production
+                                 
+                                 // Show the buyer a 'Pay Now' button in the checkout flow
+                                 commit: true,
+                                 
+                                 // payment() is called when the button is clicked
+                                 payment: function() {
+                                 
+                                 // Set up a url on your server to create the payment
+                                 var CREATE_URL = 'http://yourapp.com/api/v1/paypal/payment/create/';
+                                 
+                                 // Set up the data you need to pass to your server
+                                 var data = {
+                                 'product_id': productId
+                                 };
+                                 
+                                 // Make a call to your server to set up the payment
+                              
+                                 return paypal.request({
+                                                       method: 'post',
+                                                       url: CREATE_URL,
+                                                       headers: {
+                                                       "Authorization": userToken
+                                                       },
+                                                       data: data
+                                                       }).then(function(res) {
+                                                               console.log(res);
+                                                               return res.paymentID;
+                                                               }).catch(function (error) {
+                                                                        console.debug(error);
+                                                                        window.alert(JSON.stringify(error))
+                                                                        });
+                                 
+                                 },
+                                 
+                                 // onAuthorize() is called when the buyer approves the payment
+                                 onAuthorize: function(data, actions) {
+   
+                                 //paypal_save(data);
+                                var EXECUTE_PAYMENT_URL = 'http://yourapp.com/api/v1/paypal/payment/execute/';
+                                 
+                                 // Set up the data you need to pass to your server
+                                 var data1 = {
+                                 'product_id': productId,
+                                 'payerID': data.payerID,
+                                 'paymentID': data.paymentID,
+                                 };
+                                 //window.alert(JSON.stringify(data1))
+                                 
+                                 return paypal.request({
+                                                       method: 'post',
+                                                       url: EXECUTE_PAYMENT_URL,
+                                                       headers: {
+                                                       "Authorization": userToken
+                                                       },
+                                                       data: data1
+                                                       }).then(function(res) {
+                                                               //transaction success
+                                                               console.log(res);
+                                                              // window.alert(JSON.parse(JSON.stringify(res))['paymentID'])
+                                                               triggerWithCustomMessage("success", "Your transaction has been completed successfully.",JSON.parse(JSON.stringify(res))['paymentID'])
+                                                               
+                                                               }).catch(function (error) {
+                                                                        //transaction failed
+                                                                        console.debug(error);
+                                                                         window.alert(JSON.stringify(error))
+                                                                         triggerWithCustomMessage("failed", "Your transaction has been failed.","")
+                                                                        });
+                                 
+                                 },
+                                 
+                           
+                                 }, '#paypal-button-container');
+                                 
+                                 
+                                 
+
+        
+        //---------------------------------------------------------------------------------
+        
+        
+        function setdetailsForProduct(details) {
+            //for receiving data fron ios app to js
+            var oData = JSON.parse(details);
+            productId = oData['id'];
+            userToken = oData['token'];
+            amount = oData['amount'];
+            
+            document.getElementById('amount').innerHTML = "Total Product Amount : $" + amount
+
+        }
+        
+        function triggerWithCustomMessage(status, message, paymentId) {
+            // For sending data from js to ios app
+            var value = {status: status, message: message, paymentId: paymentId };
+            var jsonString = (JSON.stringify(value));
+            var escapedJsonParameters = escape(jsonString);
+            var appName = 'Your App Name';
+            var actionType = 'TransactionDeatails';
+            
+            var url = appName + '://' + actionType + "#" + escapedJsonParameters;
+            window.location.href = url
+        }
+            </script>
+    </body>
+
+</html>
+
